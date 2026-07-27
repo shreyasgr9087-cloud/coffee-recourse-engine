@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrewLab — AI Coffee Extraction Optimizer</title>
+    <meta name="description" content="Physics-informed AI dashboard for predicting and optimizing coffee extraction using Fickian diffusion modeling.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        espresso: {
+                            50:  '#faf6f1',
+                            100: '#f0e6d6',
+                            200: '#e0ccad',
+                            300: '#c9a87a',
+                            400: '#b5854f',
+                            500: '#a36e38',
+                            600: '#8c572e',
+                            700: '#724228',
+                            800: '#5e3725',
+                            900: '#4e2f22',
+                            950: '#2c1710',
+                        },
+                        brew: {
+                            sour:     '#e5b83a',
+                            balanced: '#8b6914',
+                            bitter:   '#2c1710',
+                        },
+                        surface: {
+                            base:  '#0d0b09',
+                            card:  '#1a1512',
+                            hover: '#241e19',
+                            line:  '#2e2620',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Playfair Display', 'Georgia', 'serif'],
+                    },
+                    animation: {
+                        'gauge-fill': 'gaugeFill 0.8s cubic-bezier(0.33, 1, 0.68, 1) forwards',
+                        'fade-up': 'fadeUp 0.5s ease-out forwards',
+                        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+                        'shimmer': 'shimmer 2s linear infinite',
+                        'slide-in': 'slideIn 0.4s ease-out forwards',
+                    },
+                    keyframes: {
+                        gaugeFill: {
+                            '0%': { width: '0%' },
+                            '100%': { width: 'var(--gauge-width)' }
+                        },
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(16px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        pulseSoft: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.6' }
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' }
+                        },
+                        slideIn: {
+                            '0%': { opacity: '0', transform: 'translateY(24px) scale(0.97)' },
+                            '100%': { opacity: '1', transform: 'translateY(0) scale(1)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-surface-base text-espresso-100 min-h-screen antialiased">
+
+    <!-- Ambient Background -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
+        <div class="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-espresso-900/20 blur-[120px]"></div>
+        <div class="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-espresso-950/30 blur-[100px]"></div>
+    </div>
+
+    <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-espresso-800/50 bg-surface-card/60 backdrop-blur-sm mb-6">
+                <span class="w-2 h-2 rounded-full bg-espresso-400 animate-pulse-soft"></span>
+                <span class="text-xs font-medium text-espresso-400 tracking-widest uppercase">Fickian Diffusion Model Active</span>
+            </div>
+            <h1 class="font-display text-4xl sm:text-5xl font-bold text-espresso-50 mb-3 tracking-tight">
+                Brew<span class="text-espresso-400">Lab</span>
+            </h1>
+            <p class="text-espresso-400 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+                Physics-informed AI that predicts extraction quality and calculates the exact fix for any bad cup.
+            </p>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="grid lg:grid-cols-5 gap-6">
+
+            <!-- Left Panel: Controls -->
+            <div class="lg:col-span-3 space-y-6">
+
+                <!-- Roast Level Card -->
+                <section class="bg-surface-card/70 backdrop-blur-md border border-surface-line rounded-2xl p-6">
+                    <label class="block text-xs font-semibold text-espresso-400 tracking-widest uppercase mb-4">Roast Level</label>
+                    <div id="roast-selector" class="grid grid-cols-3 gap-3">
+                        <button type="button" data-roast="Light" class="roast-btn group relative flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 border-surface-line bg-surface-base/50 transition-all duration-300 hover:border-espresso-700">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 shadow-lg shadow-amber-500/20 transition-transform group-hover:scale-110"></div>
+                            <span class="text-sm font-medium text-espresso-300 group-hover:text-espresso-100 transition-colors">Light</span>
+                        </button>
+                        <button type="button" data-roast="Medium" class="roast-btn group relative flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 border-espresso-500 bg-espresso-950/60 ring-1 ring-espresso-500/30 transition-all duration-300">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 shadow-lg shadow-amber-800/30 transition-transform group-hover:scale-110"></div>
+                            <span class="text-sm font-medium text-espresso-100 transition-colors">Medium</span>
+                        </button>
+                        <button type="button" data-roast="Dark" class="roast-btn group relative flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 border-surface-line bg-surface-base/50 transition-all duration-300 hover:border-espresso-700">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-stone-800 to-stone-950 shadow-lg shadow-stone-900/30 transition-transform group-hover:scale-110"></div>
+                            <span class="text-sm font-medium text-espresso-300 group-hover:text-espresso-100 transition-colors">Dark</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Sliders Card -->
+                <section class="bg-surface-card/70 backdrop-blur-md border border-surface-line rounded-2xl p-6 space-y-7">
+                    <h2 class="text-xs font-semibold text-espresso-400 tracking-widest uppercase">Brew Parameters</h2>
+
+                    <!-- Grind Size -->
+                    <div class="slider-group">
+                        <div class="flex items-baseline justify-between mb-2.5">
+                            <label for="grind_size" class="text-sm font-medium text-espresso-200">Grind Size</label>
+                            <div class="flex items-baseline gap-1">
+                                <span id="val-grind" class="text-xl font-semibold text-espresso-50 tabular-nums">750</span>
+                                <span class="text-xs text-espresso-500">µm</span>
+                            </div>
+                        </div>
+                        <input type="range" id="grind_size" min="300" max="1200" step="10" value="750" class="brew-slider">
+                        <div class="flex justify-between mt-1.5">
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Fine (Espresso)</span>
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Coarse (French Press)</span>
+                        </div>
+                    </div>
+
+                    <!-- Water Temp -->
+                    <div class="slider-group">
+                        <div class="flex items-baseline justify-between mb-2.5">
+                            <label for="water_temp" class="text-sm font-medium text-espresso-200">Water Temperature</label>
+                            <div class="flex items-baseline gap-1">
+                                <span id="val-temp" class="text-xl font-semibold text-espresso-50 tabular-nums">93.0</span>
+                                <span class="text-xs text-espresso-500">°C</span>
+                            </div>
+                        </div>
+                        <input type="range" id="water_temp" min="80" max="100" step="0.5" value="93" class="brew-slider">
+                        <div class="flex justify-between mt-1.5">
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Cool</span>
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Near Boiling</span>
+                        </div>
+                    </div>
+
+                    <!-- Brew Time -->
+                    <div class="slider-group">
+                        <div class="flex items-baseline justify-between mb-2.5">
+                            <label for="brew_time" class="text-sm font-medium text-espresso-200">Brew Time</label>
+                            <div class="flex items-baseline gap-1">
+                                <span id="val-time" class="text-xl font-semibold text-espresso-50 tabular-nums">120</span>
+                                <span class="text-xs text-espresso-500">sec</span>
+                            </div>
+                        </div>
+                        <input type="range" id="brew_time" min="30" max="300" step="5" value="120" class="brew-slider">
+                        <div class="flex justify-between mt-1.5">
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Quick</span>
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Extended</span>
+                        </div>
+                    </div>
+
+                    <!-- Water Ratio -->
+                    <div class="slider-group">
+                        <div class="flex items-baseline justify-between mb-2.5">
+                            <label for="water_ratio" class="text-sm font-medium text-espresso-200">Water Ratio</label>
+                            <div class="flex items-baseline gap-1">
+                                <span id="val-ratio" class="text-xl font-semibold text-espresso-50 tabular-nums">16.0</span>
+                                <span class="text-xs text-espresso-500">:1</span>
+                            </div>
+                        </div>
+                        <input type="range" id="water_ratio" min="14" max="18" step="0.1" value="16" class="brew-slider">
+                        <div class="flex justify-between mt-1.5">
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Concentrated</span>
+                            <span class="text-[10px] text-espresso-600 uppercase tracking-wider">Diluted</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Predict Button -->
+                <button type="button" id="predict-btn" class="w-full relative overflow-hidden group bg-gradient-to-r from-espresso-600 to-espresso-700 hover:from-espresso-500 hover:to-espresso-600 text-espresso-50 font-semibold text-base py-4 rounded-xl border border-espresso-500/30 shadow-lg shadow-espresso-950/50 transition-all duration-300 hover:shadow-espresso-800/40 hover:-translate-y-0.5 active:translate-y-0 active:shadow-md">
+                    <span id="predict-btn-text" class="relative z-10 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                        Analyze Extraction
+                    </span>
+                    <span id="predict-btn-loading" class="hidden absolute inset-0 z-10 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Running Diffusion Model...
+                    </span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                </button>
+            </div>
+
+            <!-- Right Panel: Results -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Extraction Gauge -->
+                <section id="gauge-section" class="bg-surface-card/70 backdrop-blur-md border border-surface-line rounded-2xl p-6 transition-all duration-500">
+                    <h2 class="text-xs font-semibold text-espresso-400 tracking-widest uppercase mb-5">Extraction Profile</h2>
+
+                    <!-- Gauge Spectrum -->
+                    <div class="relative mb-5">
+                        <div class="extraction-spectrum h-4 rounded-full overflow-hidden relative">
+                            <!-- Pointer -->
+                            <div id="gauge-pointer" class="absolute top-0 bottom-0 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-700 ease-out opacity-0 z-20" style="left: 50%;">
+                                <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-white"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between mt-2">
+                            <span class="text-[10px] text-brew-sour font-semibold uppercase tracking-wider">Sour</span>
+                            <span class="text-[10px] text-espresso-300 font-semibold uppercase tracking-wider">Balanced</span>
+                            <span class="text-[10px] text-espresso-600 font-semibold uppercase tracking-wider">Bitter</span>
+                        </div>
+                    </div>
+
+                    <!-- Result Display -->
+                    <div id="result-placeholder" class="text-center py-6">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-full border-2 border-dashed border-surface-line flex items-center justify-center">
+                            <svg class="w-7 h-7 text-espresso-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        </div>
+                        <p class="text-sm text-espresso-600">Configure your brew and run the analysis</p>
+                    </div>
+
+                    <div id="result-display" class="hidden">
+                        <div class="text-center mb-5">
+                            <div id="result-icon" class="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center text-3xl"></div>
+                            <h3 id="result-label" class="font-display text-2xl font-bold text-espresso-50 mb-1"></h3>
+                            <p id="result-confidence" class="text-sm text-espresso-400"></p>
+                        </div>
+
+                        <!-- Confidence Bars -->
+                        <div class="space-y-3 mt-5 pt-5 border-t border-surface-line">
+                            <h4 class="text-[10px] font-semibold text-espresso-500 tracking-widest uppercase mb-3">Confidence Breakdown</h4>
+                            <div class="space-y-2.5" id="confidence-bars"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Fix My Brew Section -->
+                <section id="fix-section" class="hidden">
+                    <div class="bg-surface-card/70 backdrop-blur-md border border-espresso-700/40 rounded-2xl p-6 animate-slide-in">
+                        <div class="flex items-center gap-3 mb-5">
+                            <div class="w-9 h-9 rounded-lg bg-espresso-800/60 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-espresso-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-espresso-100 text-sm">Fix My Brew</h3>
+                                <p class="text-xs text-espresso-500">Select what you can adjust</p>
+                            </div>
+                        </div>
+
+                        <!-- Feature Checkboxes -->
+                        <div class="grid grid-cols-2 gap-2.5 mb-5" id="mutable-features">
+                            <label class="fix-checkbox group">
+                                <input type="checkbox" value="grind_size_microns" checked class="sr-only peer">
+                                <div class="fix-checkbox-visual peer-checked:border-espresso-500 peer-checked:bg-espresso-900/40">
+                                    <svg class="w-4 h-4 text-espresso-500 opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    <span class="text-xs font-medium">Grind Size</span>
+                                </div>
+                            </label>
+                            <label class="fix-checkbox group">
+                                <input type="checkbox" value="water_temp_c" class="sr-only peer">
+                                <div class="fix-checkbox-visual peer-checked:border-espresso-500 peer-checked:bg-espresso-900/40">
+                                    <svg class="w-4 h-4 text-espresso-500 opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    <span class="text-xs font-medium">Water Temp</span>
+                                </div>
+                            </label>
+                            <label class="fix-checkbox group">
+                                <input type="checkbox" value="brew_time_seconds" checked class="sr-only peer">
+                                <div class="fix-checkbox-visual peer-checked:border-espresso-500 peer-checked:bg-espresso-900/40">
+                                    <svg class="w-4 h-4 text-espresso-500 opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    <span class="text-xs font-medium">Brew Time</span>
+                                </div>
+                            </label>
+                            <label class="fix-checkbox group">
+                                <input type="checkbox" value="water_ratio" class="sr-only peer">
+                                <div class="fix-checkbox-visual peer-checked:border-espresso-500 peer-checked:bg-espresso-900/40">
+                                    <svg class="w-4 h-4 text-espresso-500 opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    <span class="text-xs font-medium">Water Ratio</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <button type="button" id="fix-btn" class="w-full bg-espresso-800/60 hover:bg-espresso-700/60 text-espresso-200 font-semibold text-sm py-3 rounded-xl border border-espresso-700/50 transition-all duration-300 hover:-translate-y-0.5">
+                            <span id="fix-btn-text" class="flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Calculate Optimal Fix
+                            </span>
+                            <span id="fix-btn-loading" class="hidden flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                Optimizing via Differential Evolution...
+                            </span>
+                        </button>
+
+                        <!-- Recourse Results -->
+                        <div id="fix-results" class="hidden mt-5 pt-5 border-t border-surface-line"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-16 text-center pb-8">
+            <p class="text-xs text-espresso-700">Powered by Fickian Diffusion Physics &middot; Gradient Boosting Classifier &middot; Differential Evolution Recourse</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

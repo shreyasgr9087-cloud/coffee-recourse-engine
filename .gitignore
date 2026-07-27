@@ -1,0 +1,19 @@
+# Virtual Environments
+.venv/
+venv/
+**/venv/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Dataset & Model Artifacts
+backend/coffee_dataset.csv
+backend/model.pkl
+
+# IDE settings
+.idea/
+.vscode/*
+!.vscode/settings.json
