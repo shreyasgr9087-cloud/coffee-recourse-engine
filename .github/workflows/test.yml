@@ -28,4 +28,6 @@ jobs:
     - name: Run Pytest
       run: |
         cd backend
+        python generate_data.py
+        python train_model.py
         pytest test_recourse_engine.py -v
